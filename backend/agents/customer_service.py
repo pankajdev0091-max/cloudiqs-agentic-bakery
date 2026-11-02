@@ -5,7 +5,7 @@ Combines ticket management and knowledge-base search to deliver fast,
 accurate resolutions for external customers.
 """
 
-from strands import Agent
+from backend.compat import Agent
 
 from backend.tools.ticket_tools import (
     create_ticket,

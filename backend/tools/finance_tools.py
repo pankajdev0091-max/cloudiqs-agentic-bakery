@@ -7,7 +7,7 @@ and revenue forecasting. All data is mock/simulated for demo purposes.
 
 from datetime import datetime, timedelta
 
-from strands import tool
+from backend.compat import tool
 
 
 @tool

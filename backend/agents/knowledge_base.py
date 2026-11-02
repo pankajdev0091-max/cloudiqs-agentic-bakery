@@ -5,7 +5,7 @@ Searches and retrieves information from the company knowledge base, helping
 employees quickly find policies, procedures, and documentation.
 """
 
-from strands import Agent
+from backend.compat import Agent
 
 from backend.tools.knowledge_tools import (
     search_knowledge_base,

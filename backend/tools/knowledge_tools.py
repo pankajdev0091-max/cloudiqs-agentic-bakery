@@ -9,7 +9,7 @@ import hashlib
 import random
 from datetime import datetime, timedelta
 
-from strands import tool
+from backend.compat import tool
 
 # Mock knowledge base data
 _KNOWLEDGE_BASE = {
@@ -201,7 +201,7 @@ _KNOWLEDGE_BASE = {
             "    tools=[my_tool_1, my_tool_2]\n"
             ")\nresult = agent('Hello!')\n```\n\n"
             "**Defining Tools:**\n"
-            "```python\nfrom strands import tool\n\n"
+            "```python\nfrom backend.compat import tool\n\n"
             "@tool\n"
             "def my_tool(param: str) -> dict:\n"
             "    '''Tool description used by the agent.'''\n"

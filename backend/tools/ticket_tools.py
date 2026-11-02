@@ -9,7 +9,7 @@ import hashlib
 import random
 from datetime import datetime, timedelta
 
-from strands import tool
+from backend.compat import tool
 
 
 @tool

@@ -5,7 +5,7 @@ Handles employee IT support requests -- password resets, ticket management,
 system status checks, and general technical troubleshooting.
 """
 
-from strands import Agent
+from backend.compat import Agent
 
 from backend.tools.ticket_tools import (
     create_ticket,

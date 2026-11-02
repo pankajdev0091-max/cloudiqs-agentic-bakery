@@ -5,7 +5,7 @@ Provides financial analysis, burn-rate calculations, runway forecasting,
 revenue projections, and quarterly financial summaries.
 """
 
-from strands import Agent
+from backend.compat import Agent
 
 from backend.tools.finance_tools import (
     calculate_burn_rate,

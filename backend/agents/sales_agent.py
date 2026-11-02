@@ -5,7 +5,7 @@ Supports the sales team with lead management, qualification, demo scheduling,
 and product pricing inquiries.
 """
 
-from strands import Agent
+from backend.compat import Agent
 
 from backend.tools.crm_tools import (
     lookup_lead,

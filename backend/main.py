@@ -23,18 +23,19 @@ from backend.models.schemas import (
     ConversationHistory,
 )
 from backend.agents.base import AgentFactory, CONVERSATIONS, AGENT_METRICS
+from backend.agents.orchestrator import (
+    get_orchestration_patterns,
+    MockGraphOrchestrator,
+    MockSwarmOrchestrator,
+    MockSupervisorOrchestrator,
+)
 
 # ---------------------------------------------------------------------------
 # Check whether the Strands Agents SDK is available at runtime.
 # When it is not installed we fall back to a fully self-contained mock that
 # returns realistic, keyword-aware responses for every agent type.
 # ---------------------------------------------------------------------------
-try:
-    from strands import Agent as _StrandsAgent  # noqa: F401
-
-    STRANDS_AVAILABLE = True
-except ImportError:
-    STRANDS_AVAILABLE = False
+from backend.compat import STRANDS_AVAILABLE
 
 
 # ---------------------------------------------------------------------------
@@ -602,3 +603,89 @@ async def dashboard_stats():
         "agents": per_agent,
         "timestamp": _now_iso(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Orchestration endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/orchestration/patterns")
+async def list_orchestration_patterns():
+    """Return metadata for all available multi-agent orchestration patterns."""
+    return {
+        "patterns": get_orchestration_patterns(),
+        "active_pattern": "graph",
+        "strands_available": STRANDS_AVAILABLE,
+    }
+
+
+@app.post("/api/orchestration/invoke")
+async def orchestrated_chat(request: ChatRequest):
+    """Route a message through the multi-agent orchestration pipeline.
+
+    Supports three patterns selectable via the ``pattern`` query parameter:
+      - ``graph``       : Deterministic Graph routing (default)
+      - ``swarm``       : Autonomous Swarm handoff
+      - ``supervisor``  : Supervisor with Agents-as-Tools
+    """
+    from fastapi import Query
+
+    pattern = "graph"
+    session_id = request.session_id or str(uuid.uuid4())
+    agent_id = request.agent_id or "auto"
+
+    start_time = time.time()
+
+    # --- Graph pattern (default) ---
+    if pattern == "graph":
+        routed_agent = MockGraphOrchestrator.classify(request.message)
+        orchestration_info = MockGraphOrchestrator.describe_routing(
+            request.message, routed_agent
+        )
+        agent_response = MockAgentRouter.generate_response(routed_agent, request.message)
+        response_text = orchestration_info + agent_response
+
+    # --- Swarm pattern ---
+    elif pattern == "swarm":
+        primary = MockGraphOrchestrator.classify(request.message)
+        secondary = None
+        keywords_lower = request.message.lower()
+        if ("also" in keywords_lower or "and" in keywords_lower
+                or "plus" in keywords_lower):
+            for aid in ["it-helpdesk", "sales-assistant", "customer-service",
+                        "finance-advisor", "knowledge-base"]:
+                if aid != primary:
+                    for kw in MockGraphOrchestrator.ROUTE_KEYWORDS.get(aid, []):
+                        if kw in keywords_lower:
+                            secondary = aid
+                            break
+                    if secondary:
+                        break
+        orchestration_info = MockSwarmOrchestrator.describe_handoff(primary, secondary)
+        agent_response = MockAgentRouter.generate_response(
+            secondary or primary, request.message
+        )
+        response_text = orchestration_info + agent_response
+
+    # --- Supervisor pattern ---
+    else:
+        specialists = [MockGraphOrchestrator.classify(request.message)]
+        orchestration_info = MockSupervisorOrchestrator.describe_delegation(specialists)
+        agent_response = MockAgentRouter.generate_response(
+            specialists[0], request.message
+        )
+        response_text = orchestration_info + agent_response
+
+    elapsed = time.time() - start_time
+
+    return ChatResponse(
+        message=response_text,
+        session_id=session_id,
+        agent_id=agent_id,
+        metadata={
+            "mode": "live" if STRANDS_AVAILABLE else "demo",
+            "orchestration_pattern": pattern,
+            "response_time_ms": round(elapsed * 1000, 2),
+            "timestamp": _now_iso(),
+        },
+    )
